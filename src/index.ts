@@ -11,35 +11,45 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
-addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request))
-})
+// Define the URL of the Chuck Norris API
+const apiUrl = 'https://api.chucknorris.io/jokes/random';
 
-async function handleRequest(request) {
-  if (request.method === 'POST') {
-    // if the request is a POST
-    const body = await request.text()
-    
-    // In case that the ip is in text
-    const ip = body.trim()
-    
-    // Getting the country based on yhe ip
-    const country = await getCountryFromIP(ip)
-    
-    // Answer JSON format
-    return new Response(JSON.stringify({ country }), {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-  } else {
-    return new Response('This function only accept requests POST.', { status: 405 })
+// Define a lookup table to store alternative responses
+const lookupTable = {
+  0: "Chuck Norris doesn't tell jokes. He stares at you until you laugh.",
+  1: "When Chuck Norris enters a room, he doesn't turn the lights on. He turns the dark off.",
+  2: "Chuck Norris can divide by zero.",
+  3: "When Chuck Norris does a push-up, he isn't lifting himself up, he's pushing the Earth down."
+};
+
+// Function to get a random Chuck Norris joke from the API or lookup table
+async function getRandomChuckNorrisJoke() {
+  try {
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+    return data.value; // La propiedad "value" contiene el chiste
+  } catch (error) {
+    console.error('Error fetching Chuck Norris joke from API:', error);
+    // If there is an error fetching joke from API, return a random response from the lookup table
+    const randomIndex = Math.floor(Math.random() * Object.keys(lookupTable).length);
+    return lookupTable[randomIndex];
   }
 }
 
-async function getCountryFromIP(ip) {
-  const response = await fetch(`https://ipinfo.io/${ip}/country`)
-  const country = await response.text()
-  return country.trim()
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request));
+});
+
+async function handleRequest(request) {
+  // If the request method is not GET, simply return an error message
+  if (request.method !== 'GET') {
+    return new Response('Method Not Allowed', { status: 405 });
+  }
+
+  // Get a random Chuck Norris joke
+  const joke = await getRandomChuckNorrisJoke();
+
+  // Return the joke
+  return new Response(joke, { status: 200 });
 }
 
